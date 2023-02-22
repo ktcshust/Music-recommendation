@@ -62,7 +62,7 @@ class Recommender:
         audio_features_df.drop(columns=drop_cols, inplace=True)
         artist_df = pd.concat([track_df, audio_features_df], axis=1)
         artist_df1 = artist_df.replace(np.nan, 0)
-        mask = ~self.song_df['Uri'].isin(artist_df1['Uri'])
+        mask = ~self.song_df['uri'].isin(artist_df1['uri'])
         self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
         print("Song added successfully.")
         self.song_df.to_sql('songs', cnxn, if_exists='replace', index=False)
@@ -96,7 +96,7 @@ class Recommender:
         audio_features_df.drop(columns=drop_cols, inplace=True)
         artist_df = pd.concat([df4, audio_features_df], axis=1)
         artist_df1 = artist_df.replace(np.nan, 0)
-        mask = ~self.song_df['Uri'].isin(artist_df1['Uri'])
+        mask = ~self.song_df['uri'].isin(artist_df1['uri'])
         self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
         print("Song added successfully.")
         self.song_df.to_sql('songs', cnxn, if_exists='replace', index=False)
@@ -164,7 +164,7 @@ class Recommender:
             print("Please log in first.")
             return
 
-        if title not in self.song_df['Uri'].values:
+        if title not in self.song_df['uri'].values:
             print("Song not found.")
             return
             # Return to the add rating form
@@ -346,13 +346,14 @@ class LoginScreen(QWidget):
 
     def login(self):
         # get the entered username and password
-        username = self.username.text()
-        password = self.password.text()
+        username = self.textField1.text()
+        password = self.textField2.text()
 
         # check if the username and password are correct
         if self.recommender.log_in(username, password):
             # go to the music screen
             self.go_to_music_screen()
+            self.recommender.username = username
         else:
             # show an error message
             msg_box = QMessageBox()
@@ -447,10 +448,9 @@ class SignUpScreen(QWidget):
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the username, password, and repeat password fields
-            self.username.clear()
-            self.password.clear()
-            self.repeat_password.clear()
-            return
+            self.textField1.clear()
+            self.textField2.clear()
+            self.textField3.clear()
 
     def go_to_login_screen(self):
         self.login_screen = LoginScreen()
@@ -653,6 +653,6 @@ class MusicScreen(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_screen = LoginScreen()
+    main_screen = MusicScreen()
     main_screen.show()
     sys.exit(app.exec_())
