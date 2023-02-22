@@ -108,13 +108,13 @@ class Recommender:
 
         if username in self.user_df['username'].values:
             print("Username already taken. Please choose a different username.")
-            return
+            return False
             # Return to this sign up form
-
-        self.user_df = self.user_df.append({'username': username, 'password': password}, ignore_index=True)
-        self.user_df.to_sql('users', cnxn, if_exists='replace', index=False)
-
-        print(f"Account for {username} created successfully. Please log in to continue.")
+        else:
+            self.user_df = self.user_df.append({'username': username, 'password': password}, ignore_index=True)
+            self.user_df.to_sql('users', cnxn, if_exists='replace', index=False)
+            print(f"Account for {username} created successfully. Please log in to continue.")
+            return True
 
     # Log in a user, go to main menu screen and return their ratings in screen backup the rating
     # Log in screen, have 2 textbox: username and password
@@ -130,10 +130,11 @@ class Recommender:
             else:
                 print("Your ratings:")
                 print(user_ratings)
+            return True
 
         else:
             print("Incorrect username or password. Please try again.")
-            return
+            return False
             # Return to this login form
 
     # After login, I want create a main screen with main menu, with some chosen:
