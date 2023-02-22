@@ -268,6 +268,9 @@ class MainScreen(QWidget):
         self.setLayout(vbox)
         self.show()
 
+        self.setWindowTitle("Add")
+        self.setGeometry(100, 100, 500, 500)
+
     def add(self):
         # Get the text from the text field
         song = self.textField1.text()
@@ -298,9 +301,9 @@ class MainScreen(QWidget):
 
     def switchToLoginScreen(self):
         # Switch to the LoginScreen
-        loginScreen = LoginScreen()
+        self.loginScreen = LoginScreen()
+        self.loginScreen.show()
         self.hide()
-        loginScreen.show()
 
 class LoginScreen(QWidget):
     def __init__(self):
@@ -334,6 +337,7 @@ class LoginScreen(QWidget):
         vbox.addWidget(login_button)
         # Set the layout for the window
         self.setLayout(vbox)
+        self.show()
 
         # Set the window properties
         self.setWindowTitle("Login")
@@ -399,6 +403,7 @@ class SignUpScreen(QWidget):
         vbox.addWidget(signup_button)
         # Set the layout for the window
         self.setLayout(vbox)
+        self.show()
 
         # Set the window properties
         self.setWindowTitle("Sign Up")
@@ -542,6 +547,7 @@ class MusicScreen(QMainWindow):
         tab_widget.addTab(tab3, 'Tab 3')
         tab_widget.addTab(tab4, 'Tab 4')
 
+
         # Add the tab widget to the central widget
         vbox.addWidget(tab_widget)
         central_widget.setLayout(vbox)
@@ -646,6 +652,6 @@ class MusicScreen(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_screen = MusicScreen()
+    main_screen = LoginScreen()
     main_screen.show()
     sys.exit(app.exec_())
