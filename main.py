@@ -653,6 +653,6 @@ class MusicScreen(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_screen = MusicScreen()
+    main_screen = MainScreen()
     main_screen.show()
     sys.exit(app.exec_())
