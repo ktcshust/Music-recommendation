@@ -365,31 +365,40 @@ class LoginSignUpScreen(QMainWindow):
 
     def login(self):
         # get the entered username and password
-        username = self.textField1.text()
-        password = self.textField2.text()
+        username = self.textField1_1.text()
+        password = self.textField1_2.text()
 
         # check if the username and password are correct
-        if self.recommender.log_in(username, password):
+        if username == '' or password == ''
             # go to the music screen
-            self.go_to_music_screen()
-            self.recommender.username = username
-        else:
             # show an error message
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setText('Wrong username or password')
+            msg_box.setText('Please fill out the form')
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the password field
-            self.password.clear()
+            self.textField1_1.clear()   
+            self.textField1_2.clear()
+        else:  
+            self.log_in(username, password)
+            if any((self.user_df['username'] == str(username)) & (self.user_df['password] == str(password))):
+                self.recommender.username = username       
+                self.go_to_music_screen()
+            else:
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Critical)
+                msg_box.setText('Wrong username or password')
+                msg_box.setWindowTitle('Error')
+                msg_box.exec_()
+                # clear the password field  
+                self.textField1_2.clear()
     def signup(self):
         # get the entered username and password
-        username = self.textField1.text()
-        password = self.textField2.text()
-        repeat_password = self.textField3.text()
-
-        # check if the password and repeat password match
-        if password != repeat_password:
+        username = self.textField2_1.text()
+        password = self.textField2_2.text()
+        repeat_password = self.textField2_3.text()
+        if username = '' or password = '' or repeat_password = '':
             # show an error message
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
@@ -397,11 +406,23 @@ class LoginSignUpScreen(QMainWindow):
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the password and repeat password fields
-            self.password.clear()
-            self.repeat_password.clear()
-            return
-            # check if the username already exists
-        if self.recommender.signup(username, password):
+            self.textField2_1.clear()
+            self.textField2_2.clear()
+            self.textField2_3.clear()
+        else: 
+            if password != repeat_password:
+                # show an error message
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Critical)
+                msg_box.setText('Passwords do not match')
+                msg_box.setWindowTitle('Error')
+                msg_box.exec_()
+                # clear the password and repeat password fields
+                self.textField2_2.clear()
+                self.textField2_3.clear()
+          
+            else:
+                self.recommender.signup(username, password):
             # show a success message
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Information)
