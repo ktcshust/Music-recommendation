@@ -16,6 +16,32 @@ spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id="7e5c4
 
 
 from PyQt5.QtCore import *
+from PyQt5.QtCore import Qt, QAbstractTableModel, QVariant
+
+class PandasModel(QAbstractTableModel):
+    def __init__(self, df):
+        QAbstractTableModel.__init__(self)
+        self._data = df
+
+    def rowCount(self, parent=None):
+        return len(self._data.values)
+
+    def columnCount(self, parent=None):
+        return self._data.columns.size
+
+    def data(self, index, role=Qt.DisplayRole):
+        if index.isValid():
+            if role == Qt.DisplayRole:
+                return QVariant(str(self._data.values[index.row()][index.column()]))
+        return QVariant()
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole:
+            return QVariant()
+        if orientation == Qt.Horizontal:
+            return QVariant(str(self._data.columns[section]))
+        else:
+            return QVariant(str(section + 1))
 
 class Recommender:
     def __init__(self):
@@ -640,7 +666,9 @@ class MusicScreen(QMainWindow):
             self.song_link.clear()
             return
         else:
-            if str(uri) not in self.recommender.song_df['uri']:
+            print(uri)
+            print(self.recommender.song_df['uri'])
+            if uri not in self.recommender.song_df['uri']:
                 msg_box = QMessageBox()
                 msg_box.setIcon(QMessageBox.Critical)
                 msg_box.setText('Song not found, try again')
@@ -649,6 +677,7 @@ class MusicScreen(QMainWindow):
                 # clear the song link text field
                 self.textfield3.clear()
             else:
+                self.recommender.get_similar_recommendations
                 data = self.recommender.get_similar_recommendations()
 
                 # create a table model to display the song data in the table view
