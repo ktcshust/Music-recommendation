@@ -7,7 +7,9 @@ import spotipy
 import sklearn
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+from sklearn.metrics.pairwise import cosine_similarity
 from spotipy.oauth2 import SpotifyClientCredentials
+from PyQt5.QtGui import QIntValidator
 
 spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id="7e5c4955d03c412482338a09edc225b6",
                                                                 client_secret="4ebbedb4f6554c6a9c1252e053866a82"))
@@ -16,7 +18,6 @@ spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id="7e5c4
 
 
 from PyQt5.QtCore import *
-from PyQt5.QtCore import Qt, QAbstractTableModel, QVariant
 
 class PandasModel(QAbstractTableModel):
     def __init__(self, df):
@@ -103,7 +104,6 @@ class Recommender:
         for k in range(len(spotify.album_tracks(album_uris[0])["items"])):
             df.at[k, 'Artist'] = spotify.album_tracks(album_uris[0])["items"][k]['artists'][0]['name']
             df.at[k, 'X_Uri'] = spotify.album_tracks(album_uris[0])["items"][k]['artists'][0]['uri']
-        print('C')
         for i in range(1, len(album_uris) - 1):
             df2 = pd.DataFrame.from_dict(spotify.album_tracks(album_uris[i])["items"])
             df2['Artist'] = 'xyz'
@@ -183,22 +183,20 @@ class Recommender:
         song_link = title
         song_URI = song_link.split("/")[-1].split("?")[0]
         URI = "spotify:track:" + song_URI
-
-        if URI not in self.song_df['uri'].values:
-            print("Song not found.")
-            return
-            # Return to the add rating form
+        if len(self.rating_df) == 0:
+            print('A')
+            self.rating_df = pd.DataFrame({'username': [self.username], 'title': [title], 'rating': [rating]})
         else:
-            if int(rating) < 0 or int(rating) > 100:
-                print("Rated again.")
+            if URI not in self.song_df['uri'].values:
+                print("Song not found.")
+                # Return to the add rating form
             else:
-                if self.rating_df.empty:
-                    self.rating_df = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+                if int(rating) < 0 or int(rating) > 100:
+                    print("Rated again.")
                 else:
-                    indices_to_drop = self.user_df[(self.user_df['username'] == self.username) & (self.user_df['title'] == title)].index
-                    self.user_df = self.user_df.drop(indices_to_drop)
-                    rating_df1 = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+                    rating_df1 = pd.DataFrame({'username': [self.username], 'title': [title], 'rating': [rating]})
                     self.rating_df = pd.concat([self.rating_df, rating_df1], ignore_index=True)
+        return self.rating_df
 
 
     # Screen to recommend similar songs based on a given song, have one textbox is title, a confirm button and a listbox to display the result
@@ -218,6 +216,7 @@ class Recommender:
         ind = []
         tit = []
         name = []
+        score = []
         for (x, y) in sim_scores:
             ind.append(x)
             score.append(y)
@@ -229,20 +228,38 @@ class Recommender:
 
     # Screen recommend songs based on the user's ratings and song features, have a button to recommend and a listbox to display the result
     def recommend_songs(self):
-        if not self.username or not self.password:
-            print("Please log in first.")
-            return
-
         user_ratings = self.rating_df.loc[self.rating_df['username'] == self.username]
+        print(user_ratings)
+        self.song_df['title'] = 'https://open.spotify.com/track/' + self.song_df['id']
+        print(self.song_df)
+        merged_df = self.song_df.merge(user_ratings[['title', 'rating']], on='title', how='left')
+        print(merged_df)
+        merged_df.to_csv('demo.csv')
+        rated_songs = merged_df[~merged_df['rating'].isna()]
+        print(rated_songs)
+        unrated_songs = song_df[merged_df['rating'].isna()]
+        print(unrated_songs)
 
-        usersong = self.song_df[self.song_df['uri'].isin(user_ratings['uri'].tolist())]
-        usersong1 = usersong.reset_index(drop=True)
-        usersong2 = usersong1[['danceability', 'energy', 'valence', 'instrumentalness', 'acousticness', 'speechiness']]
-        userprofile = usersong2.transpose().dot(user_ratings['rating'])
-        genretable = self.song_df.set_index(self.song_df['movieId'])
-        genretable1 = genretable[['danceability', 'energy', 'valence', 'instrumentalness', 'acousticness', 'speechiness']]
-        recommendationtable_df = ((genretable1 * userprofile).sum(axis=1)) / (userprofile.sum())
-        return recommendationtable_df
+        # Calculate the similarity between the rated and unrated songs using cosine similarity
+        similarity_matrix = cosine_similarity(rated_songs.iloc[:, 1:-1], unrated_songs.iloc[:, 1:-1])
+
+        # Select the top k similar songs
+        k = 10
+        top_k_indices = np.argsort(similarity_matrix, axis=0)[-k:]
+
+        # Use the ratings of the top k songs and their feature values to predict the rating of the unrated song
+        predicted_ratings = []
+        for i in range(unrated_songs.shape[0]):
+            similarity_scores = similarity_matrix[top_k_indices[:, i], i]
+            ratings = rated_songs.iloc[top_k_indices[:, i], -1]
+            predicted_rating = np.dot(similarity_scores, ratings) / np.sum(similarity_scores)
+            predicted_ratings.append(predicted_rating)
+        
+
+        # Add the predicted ratings to the dataframe
+        unrated_songs['predicted_rating'] = predicted_ratings
+        return unrated_songs
+        print(unrated_songs)
 
     # Log out of the current account
     # Log out button in main menu of main screen
@@ -323,7 +340,7 @@ class MainScreen(QWidget):
 
     def switchToLoginScreen(self):
         # Switch to the LoginScreen
-        self.loginScreen = LoginSignUpScreenScreen()
+        self.loginScreen = LoginSignUpScreen()
         self.loginScreen.show()
         self.hide()
 
@@ -526,8 +543,8 @@ class MusicScreen(QMainWindow):
         crawlbutton = QPushButton('Crawl')
         crawlbutton.clicked.connect(self.crawl)
         refreshbutton = QPushButton('Refresh')
-        refreshbutton.clicked.connect(self.full_song)
         self.tableview1 = QTableView()
+        refreshbutton.clicked.connect(self.full_song)
         tab1.layout = QVBoxLayout(tab1)
         tab1.layout.addWidget(label1_1)
         tab1.layout.addWidget(self.textfield1_1)
@@ -546,6 +563,7 @@ class MusicScreen(QMainWindow):
         self.textfield2_1 = QLineEdit()
         label2_2 = QLabel('Rating')
         self.textfield2_2 = QLineEdit()
+        self.textfield2_2.setValidator(QIntValidator())
         ratingbutton = QPushButton('Enter')
         ratingbutton.clicked.connect(self.rating)
         refresh2button = QPushButton('Refresh')
@@ -637,7 +655,7 @@ class MusicScreen(QMainWindow):
 
     def full_rating(self):
         # get the data
-        data = self.recommender.rating_df[self.recommender.rating_df['username'] == self.recommend.username]
+        data = self.recommender.rating_df[self.recommender.rating_df['username'] == self.recommender.username]
 
         # create a table model to display the song data in the table view
         table_model = PandasModel(data)
@@ -648,7 +666,25 @@ class MusicScreen(QMainWindow):
     def rating(self):
         title = self.textfield2_1.text()
         rating = self.textfield2_2.text()
-        self.recommender.add_rating(title, rating)
+        if 'open.spotify.com' not in title:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setText('Invalid song link')
+            msg_box.setWindowTitle('Error')
+            msg_box.exec_()
+            # clear the song link text field
+            self.textfield2_1.clear()
+        else:
+            if int(rating) < 1 and int(rating) > 100:
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Critical)
+                msg_box.setText('Invalid rating')
+                msg_box.setWindowTitle('Error')
+                msg_box.exec_()
+                # clear the song link text field
+                self.textfield2_2.clear()
+            else:
+                self.recommender.add_rating(title, rating)
 
     def get_similar_recommendations(self):
         # get the song link from the textfield
@@ -664,37 +700,40 @@ class MusicScreen(QMainWindow):
             msg_box.exec_()
             # clear the song link text field
             self.song_link.clear()
-            return
         else:
-            print(uri)
-            print(self.recommender.song_df['uri'])
+            if any(self.recommender.song_df['uri'] == uri):
 
-            self.recommender.get_similar_recommendations
-            data = self.recommender.get_similar_recommendations()
+                self.recommender.get_similar_recommendations(song_link)
+                data = self.recommender.get_similar_recommendations(song_link)
 
-            # create a table model to display the song data in the table view
-            table_model = PandasModel(data)
-            self.tableview3.setModel(table_model)
-
+                # create a table model to display the song data in the table view
+                table_model = PandasModel(data)
+                self.tableview3.setModel(table_model)
+            else:
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Critical)
+                msg_box.setText('Song not found')
+                msg_box.setWindowTitle('Error')
+                msg_box.exec_()
 
 
         # create a pandas DataFrame for the similar songs
 
 
     def get_recommend(self):
+        self.recommender.recommend_songs()
         # get the data
-        data = self.recommender.recommendationtable_df
+        #data = self.recommender.recommend_songs
 
         # create a table model to display the song data in the table view
-        table_model = QAbstractTableModel(data)
+        #table_model = PandasModel(data)
 
         # set the table model on the table view
-        table_view = self.tab_widget.widget(0).findChild(QTableView)
-        table_view.setModel(table_model)
+        #self.tableview4.setModel(table_model)
 
 if __name__ == "__main__":
     Recommender = Recommender()
     app = QApplication(sys.argv)
-    main_screen = LoginSignUpScreen(Recommender)
+    main_screen = MusicScreen(Recommender)
     main_screen.show()
     sys.exit(app.exec_())
