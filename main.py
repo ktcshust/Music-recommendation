@@ -184,7 +184,7 @@ class Recommender:
         song_URI = song_link.split("/")[-1].split("?")[0]
         URI = "spotify:track:" + song_URI
 
-        if title not in self.song_df['uri'].values:
+        if URI not in self.song_df['uri'].values:
             print("Song not found.")
             return
             # Return to the add rating form
