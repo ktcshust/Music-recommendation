@@ -124,13 +124,6 @@ class Recommender:
                 password in self.user_df.loc[self.user_df['username'] == username]['password'].values):
             self.username = username
             self.password = password
-            user_ratings = self.rating_df.loc[self.rating_df['username'] == username]
-            if user_ratings.empty:
-                print("You have not rated any songs yet.")
-            else:
-                print("Your ratings:")
-                print(user_ratings)
-            return True
 
         else:
             print("Incorrect username or password. Please try again.")
@@ -151,7 +144,7 @@ class Recommender:
 
     # Create a screen display the userrating, textbox to display result
     def full_rating(self):
-        return self.rating_df.loc[self.rating_df['username'] == self.username]
+        return self.rating_df[self.rating_df['username'] == self.username]
 
     # Add a rating for a song
     # Create a screen to rating the song, 2 textbox is title and rating, and a button to confirm
@@ -160,33 +153,26 @@ class Recommender:
         song_link = title
         song_URI = song_link.split("/")[-1].split("?")[0]
         URI = "spotify:track:" + song_URI
-        if not self.username or not self.password:
-            print("Please log in first.")
-            return
 
         if title not in self.song_df['uri'].values:
             print("Song not found.")
             return
             # Return to the add rating form
-        if rating < 0 or rating > 100:
-            print("Rated again.")
-            return
-        if self.rating_df.loc[(self.rating_df['username'] == self.username) & (self.rating_df['uri'] == URI)].empty:
-            self.rating_df = self.rating_df.append({'username': self.username, 'title': title, 'rating': rating},
-                                                   ignore_index=True)
-            print(f"Rating of {rating} for {title} added successfully.")
         else:
-            self.rating_df.loc[
-                (self.rating_df['username'] == self.username) & (self.rating_df['uri'] == URI), 'rating'] = rating
-            print(f"Rating of {rating} for {title} updated successfully.")
-        self.rating_df.to_sql('ratings', cnxn, if_exists='replace', index=False)
+            if int(rating) < 0 or int(rating) > 100:
+               print("Rated again.")
+            else:
+               if self.rating_df.empty:
+                  self.rating_df = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+               else:
+                  rating_df1 = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+                  self.rating_df = pd.concat([self.rating_df, rating_df1], ignore_index=True)
+
 
     # Screen to recommend similar songs based on a given song, have one textbox is title, a confirm button and a listbox to display the result
     def get_similar_recommendations(self, title):
-        tfidfv = TfidfVectorizer(analyzer='word', stop_words='english')
-        tfidfv_matrix = tfidfv.fit_transform(
-            self.song_df[['danceability', 'energy', 'valence', 'instrumentalness', 'acousticness', 'speechiness']])
-        cosine_sim1 = linear_kernel(tfidfv_matrix, tfidfv_matrix)
+        X = self.song_df[['danceability', 'energy', 'valence', 'instrumentalness', 'acousticness', 'speechiness']]
+        cosine_sim1 = cosine_similarity(X, X)
         indices = pd.Series(data=list(self.song_df.index), index=self.song_df['uri'])
         song_URI = title.split("/")[-1].split("?")[0]
         URI = "spotify:track:" + song_URI
@@ -196,15 +182,15 @@ class Recommender:
 
         sim_scores.sort(key=lambda x: x[1], reverse=True)
 
-        sim_scores = sim_scores[1:51]
+        sim_scores = sim_scores[1:21]
         ind = []
+        tit = []
+        name = []
         for (x, y) in sim_scores:
             ind.append(x)
-
-        tit = []
-        for x in ind:
-            tit.append(self.song_df.iloc[x]['Uri'])
-        return pd.Series(data=tit, index=ind)
+            tit.append(self.song_df.iloc[x]['uri'])
+            name.append(self.song_df.iloc[x]['name'])
+        return pd.Series(data=tit, index=ind, name=name)
 
     # Screen recommend songs based on the user's ratings and song features, have a button to recommend and a listbox to display the result
     def recommend_songs(self):
@@ -297,8 +283,8 @@ class MainScreen(QWidget):
             msg_box.exec_()
             # clear the song link text field
             self.artist.clear()
-            return
-        self.recommender.crawler(artist)
+        else:
+            self.recommender.crawler(artist)
 
     def switchToLoginScreen(self):
         # Switch to the LoginScreen
@@ -306,12 +292,12 @@ class MainScreen(QWidget):
         self.loginScreen.show()
         self.hide()
 
-class LoginScreen(QWidget):
-    def __init__(self):
+class LoginSignUpScreen(QMainWindow):
+    def __init__(self, Recommender):
         super().__init__()
 
         self.initUI()
-        self.recommender = Recommender()
+        self.recommender = Recommender
 
     def initUI(self):
         # Create a label with some text
@@ -458,11 +444,11 @@ class SignUpScreen(QWidget):
         self.close()
 
 
-class MusicScreen(QMainWindow):
+class MusicScreen(QMainWindow, Recommender):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.recommender = Recommender()
+        self.recommender = Recommender
 
     def initUI(self):
         # Create a central widget for the main window
