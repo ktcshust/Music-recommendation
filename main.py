@@ -71,11 +71,13 @@ class Recommender:
         URI = "spotify:track:" + artist_URI
         album_uris = [z["uri"] for z in spotify.artist_albums(artist_URI)["items"]]
         df = pd.DataFrame.from_dict(spotify.album_tracks(album_uris[0])["items"])
+        print('T')
         df['Artist'] = 'xyz'
         df['X_Uri'] = 'abc'
         for k in range(len(spotify.album_tracks(album_uris[0])["items"])):
             df.at[k, 'Artist'] = spotify.album_tracks(album_uris[0])["items"][k]['artists'][0]['name']
             df.at[k, 'X_Uri'] = spotify.album_tracks(album_uris[0])["items"][k]['artists'][0]['uri']
+        print('C')
         for i in range(1, len(album_uris) - 1):
             df2 = pd.DataFrame.from_dict(spotify.album_tracks(album_uris[i])["items"])
             df2['Artist'] = 'xyz'
@@ -84,15 +86,18 @@ class Recommender:
                 df2.at[k, 'Artist'] = spotify.album_tracks(album_uris[i])["items"][k]['artists'][0]['name']
                 df2.at[k, 'X_Uri'] = spotify.album_tracks(album_uris[i])["items"][k]['artists'][0]['uri']
             df = pd.concat([df, df2], ignore_index=True)
+        print('D')
         df3 = df.reset_index()
         df3.drop('index', axis=1)
         df4 = df3.drop('index', axis=1)
         track_audio_features = spotify.audio_features(tracks=df4['uri'].values.tolist())
+        print('A')
         audio_features_df = pd.DataFrame.from_dict(track_audio_features)
         drop_cols = ['type', 'id', 'uri', 'track_href', 'analysis_url']
         audio_features_df.drop(columns=drop_cols, inplace=True)
         artist_df = pd.concat([df4, audio_features_df], axis=1)
         artist_df1 = artist_df.replace(np.nan, 0)
+        print('B')
         if len(self.song_df) == 0:
             self.song_df = artist_df1
         else:
@@ -287,6 +292,7 @@ class MainScreen(QWidget):
             # clear the song link text field
             self.textField2.clear()
         else:
+            print('Crawl')
             self.recommender.crawler(artist)
 
     def switchToLoginScreen(self):
@@ -585,7 +591,7 @@ class MusicScreen(QMainWindow):
     def crawl(self):
         # Get the text from the text field
         artist = self.textfield1_2.text()
-        if 'open.spotify.com' not in song:
+        if 'open.spotify.com' not in artist:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
             msg_box.setText('Invalid song link, please try again')
@@ -594,7 +600,7 @@ class MusicScreen(QMainWindow):
             # clear the song link text field
             self.textfield1_2.clear()
         else:
-            self.recommender.crawl(artist)
+            self.recommender.crawler(artist)
 
     def full_song(self):
         # get the data
