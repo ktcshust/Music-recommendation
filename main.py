@@ -20,9 +20,9 @@ from PyQt5.QtCore import *
 class Recommender:
     def __init__(self):
         # Initialize the DataFrames from SQL Server
-        self.user_df = pd.read_sql('SELECT * FROM users', cnxn)
-        self.rating_df = pd.read_sql('SELECT * FROM ratings', cnxn)
-        self.song_df = pd.read_sql('SELECT * FROM songs', cnxn)
+        self.user_df = pd.DataFrame()
+        self.rating_df = pd.DataFrame()
+        self.song_df = pd.DataFrame()
         self.username = None
         self.password = None
 
@@ -57,10 +57,12 @@ class Recommender:
         audio_features_df.drop(columns=drop_cols, inplace=True)
         artist_df = pd.concat([track_df, audio_features_df], axis=1)
         artist_df1 = artist_df.replace(np.nan, 0)
-        mask = ~self.song_df['uri'].isin(artist_df1['uri'])
-        self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
+        if len(self.song_df) == 0:
+            self.song_df = artist_df1
+        else:
+            mask = ~self.song_df['uri'].isin(artist_df1['uri'])
+            self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
         print("Song added successfully.")
-        self.song_df.to_sql('songs', cnxn, if_exists='replace', index=False)
 
     def crawler(self, x):
         # Create a box to print x
@@ -91,31 +93,35 @@ class Recommender:
         audio_features_df.drop(columns=drop_cols, inplace=True)
         artist_df = pd.concat([df4, audio_features_df], axis=1)
         artist_df1 = artist_df.replace(np.nan, 0)
-        mask = ~self.song_df['uri'].isin(artist_df1['uri'])
-        self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
+        if len(self.song_df) == 0:
+            self.song_df = artist_df1
+        else:
+            mask = ~self.song_df['uri'].isin(artist_df1['uri'])
+            self.song_df = pd.concat([self.song_df[mask], artist_df1], ignore_index=True)
         print("Song added successfully.")
-        self.song_df.to_sql('songs', cnxn, if_exists='replace', index=False)
 
     # Create login and signup screen, main menu to choose login and signup
 
     # Screen sign up for a new account, have 3 text box to print: Username, Password, Repeat Password
     def signup(self, username, password):
-
-        if username in self.user_df['username'].values:
-            print("Username already taken. Please choose a different username.")
-            return False
-            # Return to this sign up form
+        if len(self.user_df) == 0:
+            print('Signup')
+            self.user_df = pd.DataFrame({'username': [username], 'password': [password]})
         else:
-            user_df1 = pd.DataFrame({'username': [username], 'password': [password]})
-            self.user_df = pd.concat([self.user_df, user_df1], ignore_index = True)
-            print(f"Account for {username} created successfully. Please log in to continue.")
-            return True
+            if any(self.user_df['username'] == str(username)):
+                print("Username already taken. Please choose a different username.")
+            else:
+                user_df1 = pd.DataFrame({'username': [username], 'password': [password]})
+                print('Signup')
+                self.user_df = pd.concat([self.user_df, user_df1], ignore_index = True)
+                print(f"Account for {username} created successfully. Please log in to continue.")
+            print(self.user_df)
 
     # Log in a user, go to main menu screen and return their ratings in screen backup the rating
     # Log in screen, have 2 textbox: username and password
 
     def log_in(self, username, password):
-        if any((self.user_df('username') == str(username)) & (self.user_df('password') == str(password))):
+        if any((self.user_df['username'] == username) & (self.user_df['password'] == password)):
             self.username = username
             self.password = password
             print("Login")
@@ -255,38 +261,37 @@ class MainScreen(QWidget):
 
         self.setWindowTitle("Add")
         self.setGeometry(100, 100, 500, 500)
-
     def add(self):
         # Get the text from the text field
         song = self.textField1.text()
-        if 'open.spotify.com' not in song:
+        if 'open.spotify.com/track' not in song:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
             msg_box.setText('Invalid song link, please try again')
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the song link text field
-            self.song.clear()
+            self.textField1.clear()
         else:
             self.recommender.add(song)
 
     def crawl(self):
         # Get the text from the text field
         artist = self.textField2.text()
-        if 'open.spotify.com' not in artist:
+        if 'open.spotify.com/artist' not in artist:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
             msg_box.setText('Invalid artist link, please try again')
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the song link text field
-            self.artist.clear()
+            self.textField2.clear()
         else:
             self.recommender.crawler(artist)
 
     def switchToLoginScreen(self):
         # Switch to the LoginScreen
-        self.loginScreen = LoginScreen()
+        self.loginScreen = LoginSignUpScreenScreen()
         self.loginScreen.show()
         self.hide()
 
@@ -379,8 +384,9 @@ class LoginSignUpScreen(QMainWindow):
             self.textField1_1.clear()   
             self.textField1_2.clear()
         else:  
-            self.log_in(username, password)
-            if any((self.user_df['username'] == str(username)) & (self.user_df['password'] == str(password))):
+            self.recommender.log_in(username, password)
+            print('Login')
+            if any((self.recommender.user_df['username'] == str(username)) & (self.recommender.user_df['password'] == str(password))):
                 self.recommender.username = username       
                 self.go_to_music_screen()
             else:
@@ -421,34 +427,42 @@ class LoginSignUpScreen(QMainWindow):
           
             else:
                 self.recommender.signup(username, password)
-                if any(self.recommender.user_df['username'] == username):
-                    msg_box = QMessageBox()
-                    msg_box.setIcon(QMessageBox.Information)
-                    msg_box.setText('Username already exists')
-                    msg_box.setWindowTitle('Error')
-                    msg_box.exec_()
-                    # clear the username, password, and repeat password fields
-                    self.textField2_1.clear()
-                    self.textField2_2.clear()
-                    self.textField2_3.clear()
-
-
-                else:
+                if len(self.recommender.user_df) == 0:
                     # show an error message
                     msg_box = QMessageBox()
                     msg_box.setIcon(QMessageBox.Critical)
                     msg_box.setText('Sign up successful')
                     msg_box.setWindowTitle('Success')
                     msg_box.exec_()
+                else:
+                    if not any(self.recommender.user_df['username'] == username):
+                        # show an error message
+                        msg_box = QMessageBox()
+                        msg_box.setIcon(QMessageBox.Critical)
+                        msg_box.setText('Sign up successful')
+                        msg_box.setWindowTitle('Success')
+                        msg_box.exec_()
 
+
+
+                    else:
+                        msg_box = QMessageBox()
+                        msg_box.setIcon(QMessageBox.Information)
+                        msg_box.setText('Username already exists')
+                        msg_box.setWindowTitle('Error')
+                        msg_box.exec_()
+                        # clear the username, password, and repeat password fields
+                        self.textField2_1.clear()
+                        self.textField2_2.clear()
+                        self.textField2_3.clear()
     def go_to_music_screen(self):
-        self.music_screen = MusicScreen()
+        self.music_screen = MusicScreen(Recommender)
         self.music_screen.show()
         self.hide()
 
 
-class MusicScreen(QMainWindow, Recommender):
-    def __init__(self):
+class MusicScreen(QMainWindow):
+    def __init__(self, Recommender):
         super().__init__()
         self.initUI()
         self.recommender = Recommender
@@ -486,7 +500,7 @@ class MusicScreen(QMainWindow, Recommender):
         tab1.layout.addWidget(label1_1)
         tab1.layout.addWidget(self.textfield1_1)
         tab1.layout.addWidget(addbutton)
-        tab2.layout.addWidget(label1_2)
+        tab1.layout.addWidget(label1_2)
         tab1.layout.addWidget(self.textfield1_2)
         tab1.layout.addWidget(crawlbutton)
         tab1.layout.addWidget(refreshbutton)
@@ -535,14 +549,14 @@ class MusicScreen(QMainWindow, Recommender):
         self.tableview4 = QTableView()
         tab4.layout = QVBoxLayout(tab3)
         tab4.layout.addWidget(getrecbutton)
-        tab4.layout.addWidget(tableview4)
+        tab4.layout.addWidget(self.tableview4)
         tab4.setLayout(tab4.layout)
 
         # Add the tabs to the tab widget
-        tab_widget.addTab(tab1, 'Tab 1')
-        tab_widget.addTab(tab2, 'Tab 2')
-        tab_widget.addTab(tab3, 'Tab 3')
-        tab_widget.addTab(tab4, 'Tab 4')
+        tab_widget.addTab(tab1, 'Add and crawl')
+        tab_widget.addTab(tab2, 'Rating')
+        tab_widget.addTab(tab3, 'Recommend')
+        tab_widget.addTab(tab4, 'Predicted rating')
 
 
         # Add the tab widget to the central widget
@@ -564,9 +578,9 @@ class MusicScreen(QMainWindow, Recommender):
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the song link text field
-            self.song.clear()
-            return
-        self.recommender.add(song)
+            self.textfield1_1.clear()
+        else:
+            self.recommender.add(song)
 
     def crawl(self):
         # Get the text from the text field
@@ -578,9 +592,9 @@ class MusicScreen(QMainWindow, Recommender):
             msg_box.setWindowTitle('Error')
             msg_box.exec_()
             # clear the song link text field
-            self.song.clear()
-            return
-        self.recommender.crawl(artist)
+            self.textfield1_2.clear()
+        else:
+            self.recommender.crawl(artist)
 
     def full_song(self):
         # get the data
@@ -619,32 +633,26 @@ class MusicScreen(QMainWindow, Recommender):
             # clear the song link text field
             self.song_link.clear()
             return
-        if not self.recommender.song_df['uri'].isin([uri]).any():
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setText('Song not found, try again')
-            msg_box.setWindowTitle('Error')
-            msg_box.exec_()
-            # clear the song link text field
-            self.song_link.clear()
-            return
-        # call the get_similar_recommendations function of the recommender
-        similar_songs = self.recommender.get_similar_recommendations(song_link)
+        else:
+            if str(uri) not in self.recommender.song_df['uri']:
+                msg_box = QMessageBox()
+                msg_box.setIcon(QMessageBox.Critical)
+                msg_box.setText('Song not found, try again')
+                msg_box.setWindowTitle('Error')
+                msg_box.exec_()
+                # clear the song link text field
+                self.textfield3.clear()
+            else:
+                data = self.recommender.get_similar_recommendations()
 
-        # check if there are any similar songs
-        if len(similar_songs) == 0:
-            self.show_error_message('No similar songs found')
-            return
+                # create a table model to display the song data in the table view
+                table_model = PandasModel(data)
+                self.tableview3.setModel(table_model)
+
+
 
         # create a pandas DataFrame for the similar songs
-        similar_songs_df = pd.DataFrame({'Song Link': similar_songs})
 
-        # create a table model to display the song data in the table view
-        table_model = QAbstractTableModel(similar_songs_df)
-
-        # set the table model on the table view
-        tableview3 = self.tab_widget.widget(0).findChild(QTableView)
-        tableview3.setModel(table_model)
 
     def get_recommend(self):
         # get the data
@@ -660,6 +668,6 @@ class MusicScreen(QMainWindow, Recommender):
 if __name__ == "__main__":
     Recommender = Recommender()
     app = QApplication(sys.argv)
-    main_screen = MusicScreen()
+    main_screen = LoginSignUpScreen(Recommender)
     main_screen.show()
     sys.exit(app.exec_())
