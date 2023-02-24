@@ -300,35 +300,68 @@ class LoginSignUpScreen(QMainWindow):
         self.recommender = Recommender
 
     def initUI(self):
-        # Create a label with some text
-        label1 = QLabel('Username:')
-        self.textField1 = QLineEdit()
-        label2 = QLabel('Password:')
-        self.textField2 = QLineEdit()
+        # Create a central widget for the main window
+        central_widget = QWidget(self)
+        self.setCentralWidget(central_widget)
 
-        # Create a skip button
-        login_button = QPushButton("Login")
-        login_button.clicked.connect(self.login)
+        # Create a vertical layout for the central widget
+        vbox = QVBoxLayout(central_widget)
 
-        # Create a skip button
-        signup_button = QPushButton("Sign up")
-        signup_button.clicked.connect(self.gotoSignUpScreen)
+        # Create a tab widget
+        tab_widget = QTabWidget()
 
-        # Create a vertical layout and add the label to it
-        vbox = QVBoxLayout()
-        vbox.addWidget(label1)
-        vbox.addWidget(label2)
-        vbox.addWidget(self.textField1)
-        vbox.addWidget(self.textField2)
-        vbox.addWidget(signup_button)
-        vbox.addWidget(login_button)
-        # Set the layout for the window
-        self.setLayout(vbox)
+        # Create three tabs
+        tab1 = QWidget()
+        tab2 = QWidget()
+
+        # Add some widgets to the first tab
+        label1_1 = QLabel('Username')
+        self.textField1_1 = QLineEdit()
+        label1_2 = QLabel('Password')
+        self.textField1_2 = QLineEdit()
+        loginbutton = QPushButton('Login')
+        loginbutton.clicked.connect(self.login)
+        tab1.layout = QVBoxLayout(tab1)
+        tab1.layout.addWidget(label1_1)
+        tab1.layout.addWidget(self.textField1_1)
+        tab1.layout.addWidget(label1_2)
+        tab1.layout.addWidget(self.textField1_2)
+        tab1.layout.addWidget(loginbutton)
+        tab1.setLayout(tab1.layout)
+
+        label2_1 = QLabel('Username')
+        self.textField2_1 = QLineEdit()
+        label2_2 = QLabel('Password')
+        self.textField2_2 = QLineEdit()
+        label2_3 = QLabel('Repeat password')
+        self.textField2_3 = QLineEdit()
+        signupbutton = QPushButton('Sign up')
+        signupbutton.clicked.connect(self.signup)
+        tab2.layout = QVBoxLayout(tab2)
+        tab2.layout.addWidget(label2_1)
+        tab2.layout.addWidget(self.textField2_1)
+        tab2.layout.addWidget(label2_2)
+        tab2.layout.addWidget(self.textField2_2)
+        tab2.layout.addWidget(label2_3)
+        tab2.layout.addWidget(self.textField2_3)
+        tab2.layout.addWidget(signupbutton)
+        tab2.setLayout(tab2.layout)
+
+        # Add the tabs to the tab widget
+        tab_widget.addTab(tab1, 'Login')
+        tab_widget.addTab(tab2, 'Sign up')
+
+
+        # Add the tab widget to the central widget
+        vbox.addWidget(tab_widget)
+        central_widget.setLayout(vbox)
+
+        # Set the main window properties
+        self.setGeometry(100, 100, 500, 500)
+        self.setWindowTitle('Music Screen')
         self.show()
 
-        # Set the window properties
-        self.setWindowTitle("Login")
-        self.setGeometry(100, 100, 500, 500)
+    
 
     def login(self):
         # get the entered username and password
@@ -349,54 +382,6 @@ class LoginSignUpScreen(QMainWindow):
             msg_box.exec_()
             # clear the password field
             self.password.clear()
-
-    def go_to_music_screen(self):
-        self.music_screen = MusicScreen()
-        self.music_screen.show()
-        self.hide()
-
-    def gotoSignUpScreen(self):
-        self.signup_screen = SignUpScreen()
-        self.signup_screen.show()
-        self.hide()
-
-class SignUpScreen(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        self.initUI()
-        self.recommender = Recommender()
-
-    def initUI(self):
-        # Create a label with some text
-        label1 = QLabel('Username:')
-        self.textField1 = QLineEdit()
-        label2 = QLabel('Password:')
-        self.textField2 = QLineEdit()
-        label3 = QLabel('Repeat password:')
-        self.textField3 = QLineEdit()
-
-        # Create a skip button
-        signup_button = QPushButton("Sign up")
-        signup_button.clicked.connect(self.signup)
-
-        # Create a vertical layout and add the label to it
-        vbox = QVBoxLayout()
-        vbox.addWidget(label1)
-        vbox.addWidget(label2)
-        vbox.addWidget(self.textField1)
-        vbox.addWidget(self.textField2)
-        vbox.addWidget(label3)
-        vbox.addWidget(self.textField3)
-        vbox.addWidget(signup_button)
-        # Set the layout for the window
-        self.setLayout(vbox)
-        self.show()
-
-        # Set the window properties
-        self.setWindowTitle("Sign Up")
-        self.setGeometry(100, 100, 500, 500)
-
     def signup(self):
         # get the entered username and password
         username = self.textField1.text()
@@ -438,10 +423,10 @@ class SignUpScreen(QWidget):
             self.textField2.clear()
             self.textField3.clear()
 
-    def go_to_login_screen(self):
-        self.login_screen = LoginScreen()
-        self.login_screen.show()
-        self.close()
+    def go_to_music_screen(self):
+        self.music_screen = MusicScreen()
+        self.music_screen.show()
+        self.hide()
 
 
 class MusicScreen(QMainWindow, Recommender):
@@ -468,19 +453,26 @@ class MusicScreen(QMainWindow, Recommender):
         tab4 = QWidget()
 
         # Add some widgets to the first tab
-        label1 = QLabel('Enter song link')
-        self.textfield1 = QLineEdit()
+        label1_1 = QLabel('Enter song link')
+        self.textfield1_1 = QLineEdit()
         addbutton = QPushButton('Add')
         addbutton.clicked.connect(self.add)
+        label1_2 = QLabel('Enter song artist')
+        self.textfield1_2 = QLineEdit()
+        crawlbutton = QPushButton('Crawl')
+        crawlbutton.clicked.connect(self.crawl)
         refreshbutton = QPushButton('Refresh')
         refreshbutton.clicked.connect(self.full_song)
-        tableview1 = QTableView()
+        self.tableview1 = QTableView()
         tab1.layout = QVBoxLayout(tab1)
-        tab1.layout.addWidget(label1)
-        tab1.layout.addWidget(self.textfield1)
+        tab1.layout.addWidget(label1_1)
+        tab1.layout.addWidget(self.textfield1_1)
         tab1.layout.addWidget(addbutton)
+        tab2.layout.addWidget(label1_2)
+        tab1.layout.addWidget(self.textfield1_2)
+        tab1.layout.addWidget(crawlbutton)
         tab1.layout.addWidget(refreshbutton)
-        tab1.layout.addWidget(tableview1)
+        tab1.layout.addWidget(self.tableview1)
         tab1.setLayout(tab1.layout)
 
 
@@ -494,7 +486,7 @@ class MusicScreen(QMainWindow, Recommender):
         ratingbutton.clicked.connect(self.rating)
         refresh2button = QPushButton('Refresh')
         refresh2button.clicked.connect(self.full_rating)
-        tableview2 = QTableView()
+        self.tableview2 = QTableView()
         tab2.layout = QVBoxLayout(tab2)
         tab2.layout.addWidget(label2_1)
         tab2.layout.addWidget(self.textfield2_1)
@@ -502,7 +494,7 @@ class MusicScreen(QMainWindow, Recommender):
         tab2.layout.addWidget(self.textfield2_2)
         tab2.layout.addWidget(ratingbutton)
         tab2.layout.addWidget(refresh2button)
-        tab2.layout.addWidget(tableview2)
+        tab2.layout.addWidget(self.tableview2)
 
         tab2.setLayout(tab2.layout)
 
@@ -511,18 +503,18 @@ class MusicScreen(QMainWindow, Recommender):
         self.textfield3 = QLineEdit()
         similarbutton = QPushButton('Recommend')
         similarbutton.clicked.connect(self.get_similar_recommendations)
-        tableview3 = QTableView()
+        self.tableview3 = QTableView()
         tab3.layout = QVBoxLayout(tab3)
         tab3.layout.addWidget(label3)
         tab3.layout.addWidget(self.textfield3)
         tab3.layout.addWidget(similarbutton)
-        tab3.layout.addWidget(tableview3)
+        tab3.layout.addWidget(self.tableview3)
         tab3.setLayout(tab3.layout)
 
         # Add some widgets to the fourth tab
         getrecbutton = QPushButton('Recommend')
         getrecbutton.clicked.connect(self.get_recommend)
-        tableview4 = QTableView()
+        self.tableview4 = QTableView()
         tab4.layout = QVBoxLayout(tab3)
         tab4.layout.addWidget(getrecbutton)
         tab4.layout.addWidget(tableview4)
@@ -546,7 +538,7 @@ class MusicScreen(QMainWindow, Recommender):
 
     def add(self):
         # Get the text from the text field
-        song = self.textfield1.text()
+        song = self.textfield1_1.text()
         if 'open.spotify.com' not in song:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
@@ -558,26 +550,36 @@ class MusicScreen(QMainWindow, Recommender):
             return
         self.recommender.add(song)
 
+    def crawl(self):
+        # Get the text from the text field
+        artist = self.textfield1_2.text()
+        if 'open.spotify.com' not in song:
+            msg_box = QMessageBox()
+            msg_box.setIcon(QMessageBox.Critical)
+            msg_box.setText('Invalid song link, please try again')
+            msg_box.setWindowTitle('Error')
+            msg_box.exec_()
+            # clear the song link text field
+            self.song.clear()
+            return
+        self.recommender.crawl(artist)
+
     def full_song(self):
         # get the data
         data = self.recommender.song_df
         # create a table model to display the song data in the table view
-        table_model = QAbstractTableModel(data)
-
-        # set the table model on the table view
-        tableview1 = self.tab_widget.widget(0).findChild(QTableView)
-        tableview1.setModel(table_model)
+        table_model = PandasModel(data)
+        self.tableview1.setModel(table_model)
 
     def full_rating(self):
         # get the data
-        data = self.recommender.rating_df.loc[self.recommender.rating_df['username'] == self.recommend.username]
+        data = self.recommender.rating_df[self.recommender.rating_df['username'] == self.recommend.username]
 
         # create a table model to display the song data in the table view
-        table_model = QAbstractTableModel(data)
+        table_model = PandasModel(data)
 
         # set the table model on the table view
-        tableview2 = self.tab_widget.widget(0).findChild(QTableView)
-        tableview2.setModel(table_model)
+        self.tableview2.setModel(table_model)
 
     def rating(self):
         title = self.textfield2_1.text()
