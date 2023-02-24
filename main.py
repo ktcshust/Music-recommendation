@@ -12,12 +12,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 spotify = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id="7e5c4955d03c412482338a09edc225b6",
                                                                 client_secret="4ebbedb4f6554c6a9c1252e053866a82"))
 
-server = 'DESKTOP-HV2USD0\MSSQLSERVER01'
-database = 'recommend'
-cnxn = pyodbc.connect('DRIVER={SQL Server Native Client 11.0};'
-                      f'SERVER={server};'
-                      f'DATABASE={database};'
-                      'Trusted_Connection=yes;')
+
 
 
 from PyQt5.QtCore import *
@@ -111,8 +106,8 @@ class Recommender:
             return False
             # Return to this sign up form
         else:
-            self.user_df = self.user_df.append({'username': username, 'password': password}, ignore_index=True)
-            self.user_df.to_sql('users', cnxn, if_exists='replace', index=False)
+            user_df1 = pd.DataFrame({'username': [username], 'password': [password]})
+            self.user_df = pd.concat([self.user_df, user_df1], ignore_index = True)
             print(f"Account for {username} created successfully. Please log in to continue.")
             return True
 
@@ -120,14 +115,12 @@ class Recommender:
     # Log in screen, have 2 textbox: username and password
 
     def log_in(self, username, password):
-        if (username in self.user_df['username'].values) and (
-                password in self.user_df.loc[self.user_df['username'] == username]['password'].values):
+        if any((self.user_df('username') == str(username)) & (self.user_df('password') == str(password))):
             self.username = username
             self.password = password
-
+            print("Login")
         else:
             print("Incorrect username or password. Please try again.")
-            return False
             # Return to this login form
 
     # After login, I want create a main screen with main menu, with some chosen:
@@ -160,13 +153,15 @@ class Recommender:
             # Return to the add rating form
         else:
             if int(rating) < 0 or int(rating) > 100:
-               print("Rated again.")
+                print("Rated again.")
             else:
-               if self.rating_df.empty:
-                  self.rating_df = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
-               else:
-                  rating_df1 = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
-                  self.rating_df = pd.concat([self.rating_df, rating_df1], ignore_index=True)
+                if self.rating_df.empty:
+                    self.rating_df = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+                else:
+                    indices_to_drop = self.user_df[(self.user_df['username'] == self.username) & (self.user_df['title'] == title)].index
+                    self.user_df = self.user_df.drop(indices_to_drop)
+                    rating_df1 = pd.DataFrame({username: [self.username], title: [title], rating: [rating]})
+                    self.rating_df = pd.concat([self.rating_df, rating_df1], ignore_index=True)
 
 
     # Screen to recommend similar songs based on a given song, have one textbox is title, a confirm button and a listbox to display the result
@@ -188,9 +183,12 @@ class Recommender:
         name = []
         for (x, y) in sim_scores:
             ind.append(x)
+            score.append(y)
             tit.append(self.song_df.iloc[x]['uri'])
             name.append(self.song_df.iloc[x]['name'])
-        return pd.Series(data=tit, index=ind, name=name)
+        data = {'Name': name, 'Title': tit, 'Score': score}
+        df = pd.DataFrame(data)
+        return df
 
     # Screen recommend songs based on the user's ratings and song features, have a button to recommend and a listbox to display the result
     def recommend_songs(self):
@@ -369,7 +367,7 @@ class LoginSignUpScreen(QMainWindow):
         password = self.textField1_2.text()
 
         # check if the username and password are correct
-        if username == '' or password == ''
+        if username == '' or password == '':
             # go to the music screen
             # show an error message
             msg_box = QMessageBox()
@@ -382,7 +380,7 @@ class LoginSignUpScreen(QMainWindow):
             self.textField1_2.clear()
         else:  
             self.log_in(username, password)
-            if any((self.user_df['username'] == str(username)) & (self.user_df['password] == str(password))):
+            if any((self.user_df['username'] == str(username)) & (self.user_df['password'] == str(password))):
                 self.recommender.username = username       
                 self.go_to_music_screen()
             else:
@@ -398,7 +396,7 @@ class LoginSignUpScreen(QMainWindow):
         username = self.textField2_1.text()
         password = self.textField2_2.text()
         repeat_password = self.textField2_3.text()
-        if username = '' or password = '' or repeat_password = '':
+        if username == '' or password == '' or repeat_password == '':
             # show an error message
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
@@ -422,27 +420,26 @@ class LoginSignUpScreen(QMainWindow):
                 self.textField2_3.clear()
           
             else:
-                self.recommender.signup(username, password):
-            # show a success message
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Information)
-            msg_box.setText('Sign up successful')
-            msg_box.setWindowTitle('Success')
-            msg_box.exec_()
+                self.recommender.signup(username, password)
+                if any(self.recommender.user_df['username'] == username):
+                    msg_box = QMessageBox()
+                    msg_box.setIcon(QMessageBox.Information)
+                    msg_box.setText('Username already exists')
+                    msg_box.setWindowTitle('Error')
+                    msg_box.exec_()
+                    # clear the username, password, and repeat password fields
+                    self.textField2_1.clear()
+                    self.textField2_2.clear()
+                    self.textField2_3.clear()
 
-            # go back to the login screen
-            self.go_to_login_screen()
-        else:
-            # show an error message
-            msg_box = QMessageBox()
-            msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setText('Username already exists')
-            msg_box.setWindowTitle('Error')
-            msg_box.exec_()
-            # clear the username, password, and repeat password fields
-            self.textField1.clear()
-            self.textField2.clear()
-            self.textField3.clear()
+
+                else:
+                    # show an error message
+                    msg_box = QMessageBox()
+                    msg_box.setIcon(QMessageBox.Critical)
+                    msg_box.setText('Sign up successful')
+                    msg_box.setWindowTitle('Success')
+                    msg_box.exec_()
 
     def go_to_music_screen(self):
         self.music_screen = MusicScreen()
@@ -661,7 +658,8 @@ class MusicScreen(QMainWindow, Recommender):
         table_view.setModel(table_model)
 
 if __name__ == "__main__":
+    Recommender = Recommender()
     app = QApplication(sys.argv)
-    main_screen = MainScreen()
+    main_screen = MusicScreen()
     main_screen.show()
     sys.exit(app.exec_())
