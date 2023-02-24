@@ -668,21 +668,13 @@ class MusicScreen(QMainWindow):
         else:
             print(uri)
             print(self.recommender.song_df['uri'])
-            if uri not in self.recommender.song_df['uri']:
-                msg_box = QMessageBox()
-                msg_box.setIcon(QMessageBox.Critical)
-                msg_box.setText('Song not found, try again')
-                msg_box.setWindowTitle('Error')
-                msg_box.exec_()
-                # clear the song link text field
-                self.textfield3.clear()
-            else:
-                self.recommender.get_similar_recommendations
-                data = self.recommender.get_similar_recommendations()
 
-                # create a table model to display the song data in the table view
-                table_model = PandasModel(data)
-                self.tableview3.setModel(table_model)
+            self.recommender.get_similar_recommendations
+            data = self.recommender.get_similar_recommendations()
+
+            # create a table model to display the song data in the table view
+            table_model = PandasModel(data)
+            self.tableview3.setModel(table_model)
 
 
 
